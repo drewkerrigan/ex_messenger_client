@@ -21,13 +21,11 @@ defmodule ExMessengerClient do
 
     options = OptionParser.parse(args, switches: switches, aliases: aliases)
 
-    IO.inspect options
-
     case options do
       { [ help: true], _, _}            -> :help
       { [ server: server], _, _}        -> [server]
       { [ server: server, nick: nick], _, _} -> [server, nick]
-      _                              -> :help
+      _                                 -> []
     end
   end
 
@@ -49,12 +47,24 @@ defmodule ExMessengerClient do
     System.halt(0)
   end
 
+  def process([]) do
+    process([nil, nil])
+  end
+
   def process([server]) do
     process([server, nil])
   end
 
   def process([server, nick]) do
-    server = list_to_atom(bitstring_to_list(server))
+
+    server = case server do
+             nil ->
+               IO.write "Server Name: "
+               IO.read :line
+             n -> n
+           end
+
+    server = list_to_atom(bitstring_to_list(String.rstrip(server)))
 
     IO.puts "Connecting to #{server} from #{Node.self()}..."
     Node.set_cookie(Node.self(), :"chocolate-chip")

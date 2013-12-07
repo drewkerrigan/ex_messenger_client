@@ -4,10 +4,14 @@ defmodule ExMessengerClient.Mixfile do
   def project do
 
     node = System.get_env("node")
+    node = case node do
+      nil -> "client"
+      n -> n
+    end
+    
     [ app: :ex_messenger_client,
       version: "0.0.1",
       deps: deps,
-#      escript_name: :"yeahboy",
       escript_emu_args: "%%!-sname #{node}\n"]
   end
 
