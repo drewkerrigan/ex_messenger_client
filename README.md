@@ -13,5 +13,5 @@ node=client make run
 For external testing (find your LAN ip with `ifconfig`):
 
 ```
-mode=external node=client@10.128.146.57 make run
+mode=external node=client@<your ip> make run
 ```
