@@ -1,4 +1,3 @@
-ex_messenger_client
-===================
+# ExMessengerClient
 
-A client application for ex_messenger, an elixir messaging platform
+** TODO: Add description **
