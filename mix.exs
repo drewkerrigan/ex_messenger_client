@@ -3,12 +3,12 @@ defmodule ExMessengerClient.Mixfile do
 
   def project do
 
-    IO.puts System.get_env("HELO")
+    node = System.get_env("node")
     [ app: :ex_messenger_client,
       version: "0.0.1",
       deps: deps,
 #      escript_name: :"yeahboy",
-      escript_emu_args: "%%!-sname client\n"]
+      escript_emu_args: "%%!-sname #{node}\n"]
   end
 
   # Configuration for the OTP application

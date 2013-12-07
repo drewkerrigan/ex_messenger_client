@@ -56,30 +56,44 @@ defmodule ExMessengerClient do
   def process([server, nick]) do
     server = list_to_atom(bitstring_to_list(server))
 
-    IO.puts "Connecting to server[#{server}]..."
-    IO.puts Node.self()
-    IO.inspect Node.set_cookie(Node.self(), :"chocolate-chip")
-    IO.inspect Node.get_cookie()
-    IO.inspect Node.connect(server)
+    IO.puts "Connecting to #{server} from #{Node.self()}..."
+    Node.set_cookie(Node.self(), :"chocolate-chip")
+    case Node.connect(server) do
+      true -> :ok
+      reason ->
+        IO.puts "Could not connect to server, reason: #{reason}"
+        System.halt(0)
+    end
+
+    ExMessengerClient.MessageHandler.start_link(server)
 
     IO.puts "Connected"
 
     nick = case nick do
              nil ->
-               IO.puts "Nickname: "
+               IO.write "Nickname: "
                IO.read :line
              n -> n
            end
 
-    IO.puts "Joining the chatroom"
-    IO.inspect :gen_server.call({:message_server, server}, {:connect, nick})
-    IO.puts "Joined the chatroom, type /help for options"
-    # Start genserver to handle input / output from server
+    nick = String.rstrip(nick)
+
+    case :gen_server.call({:message_server, server}, {:connect, nick}) do
+      {:ok, users} ->
+        IO.puts "**Joined the chatroom**"
+        IO.puts "**Users in room: #{users}**"
+        IO.puts "**Type /help for options**"
+      reason ->
+        IO.puts "Could not join chatroom, reason: #{reason}"
+        System.halt(0)
+    end
+
+    # Start gen_server to handle input / output from server
     input_loop([server, nick])
   end
 
   def input_loop([server, nick]) do
-    IO.puts "#{Node.self()}->#{server}: "
+    IO.write "#{Node.self()}> "
     command = IO.read :line
     handle_command(command, [server, nick])
 
@@ -87,25 +101,58 @@ defmodule ExMessengerClient do
   end
 
   def handle_command(command, [server, nick]) do
+    command = String.rstrip(command)
     case command do
-      "/help\n" ->
-        IO.puts "Avaliable commands: /leave, /join, /pm, or just type a message to send"
-      "/leave\n" ->
+      "/help" ->
+        IO.puts """
+        Avaliable commands:
+          /leave
+          /join
+          /pm <to nick> <message>
+          or just type a message to send
+        """
+      "/leave" ->
         :gen_server.call({:message_server, server}, {:disconnect, nick})
         IO.puts "You have exited the chatroom, you can rejoin with /join or quit with <Control>-c a"
-      "/join\n" ->
-        IO.puts "Joining the chatroom"
+      "/join" ->
         IO.inspect :gen_server.call({:message_server, server}, {:connect, nick})
         IO.puts "Joined the chatroom"
-      "/pm\n" ->
-        IO.puts "To (nickname): "
-        to = IO.read(:line)
-        IO.puts "Msg: "
-        message = IO.read(:line)
-        :gen_server.cast({:message_server, server}, {:private_message, nick, to, message})
+      "" ->
+        :ok
+      nil ->
+        :ok
       message ->
-        :gen_server.cast({:message_server, server}, {:say, nick, message})
+        if String.contains? message, "/pm" do
+          [to|message] = String.split(String.slice(message, 4..-1))
+          message = String.lstrip(List.foldl(message, "", fn(x, acc) -> "#{acc} #{x}" end))
+          :gen_server.cast({:message_server, server}, {:private_message, nick, to, message})
+        else
+          :gen_server.cast({:message_server, server}, {:say, nick, message})
+        end
     end
   end
 
+end
+
+defmodule ExMessengerClient.MessageHandler do
+  use GenServer.Behaviour
+
+  def start_link(server) do
+    :gen_server.start_link({ :local, :message_handler }, __MODULE__, server, [])
+  end
+
+  def init(server) do
+    { :ok, server }
+  end
+
+  def handle_call(_, _, server), do: {:reply, :error, server}
+
+  def handle_cast({:message, nick, msg}, server) do
+    msg = String.rstrip(msg)
+    IO.puts "\n#{server}> #{nick}: #{msg}"
+    IO.write "#{Node.self()}> "
+    {:noreply, server}
+  end
+
+  def handle_cast(_, server), do: {:noreply, server}
 end
