@@ -1,3 +1,9 @@
 # ExMessengerClient
 
-** TODO: Add description **
+A Client for ExMessenger
+
+## Usage
+
+```
+node=client make run
+```
