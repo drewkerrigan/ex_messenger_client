@@ -14,10 +14,11 @@ defmodule ExMessengerClient.Mixfile do
       nil -> "-sname"
       "external" -> "-name"
     end
-    
+
     [ app: :ex_messenger_client,
       version: "0.0.1",
       deps: deps,
+      escript_main_module: ExMessengerClient,
       escript_emu_args: "%%!#{mode} #{node}\n"]
   end
 
